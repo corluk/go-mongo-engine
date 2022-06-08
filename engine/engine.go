@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 
@@ -14,11 +15,34 @@ type MongoEngine struct {
 	CollectionName string
 	Connection     *mongo.Client
 	Collection     *mongo.Collection
+	Context        func() (context.Context, context.CancelFunc)
+}
+type Context interface {
+	GetContext() context.Context
+}
+
+func New(uri string, dbName string, colName string) MongoEngine {
+
+	engine := MongoEngine{
+		Uri:            uri,
+		DBName:         dbName,
+		CollectionName: colName,
+	}
+	engine.Context = func() (context.Context, context.CancelFunc) {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		return ctx, cancel
+	}
+
+	return engine
+
 }
 
 func (mongoEngine *MongoEngine) Connect() error {
 
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoEngine.Uri))
+	ctx, _ := mongoEngine.Context()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoEngine.Uri))
 	if err != nil {
 		return err
 	}
@@ -28,8 +52,8 @@ func (mongoEngine *MongoEngine) Connect() error {
 }
 
 func (mongoEngine *MongoEngine) Disconnect() error {
-
-	err := mongoEngine.Connection.Disconnect(context.TODO())
+	ctx, _ := mongoEngine.Context()
+	err := mongoEngine.Connection.Disconnect(ctx)
 	if err != nil {
 		return err
 	}
@@ -44,16 +68,90 @@ func (mongoEngine *MongoEngine) SetCollection(db string, name string) (*mongo.Co
 	return mongoEngine.Collection, nil
 }
 
-func (mongoEngine *MongoEngine) Exec(onExec func(collection *mongo.Collection) error) error {
+func (mongoEngine *MongoEngine) Exec(onExec func(collection *mongo.Collection, context *context.Context) error) error {
 	err := mongoEngine.Connect()
 	if err != nil {
 		return err
 	}
 	defer mongoEngine.Disconnect()
-	return onExec(mongoEngine.Collection)
+	ctx, _ := mongoEngine.Context()
+	return onExec(mongoEngine.Collection, &ctx)
 
 }
 
+func (mongoEngine *MongoEngine) FindOne(doc interface{}, filter interface{}, opts *options.FindOneOptions) {
+
+	mongoEngine.Exec(func(collection *mongo.Collection, context *context.Context) error {
+
+		singleResult := collection.FindOne(*context, filter, opts)
+		if singleResult.Err() != nil {
+			return singleResult.Err()
+		}
+
+		singleResult.Decode(&doc)
+		return nil
+	})
+
+}
+
+func (mongoEngine *MongoEngine) FindOneAndReplace(doc interface{}, filter interface{}, opts *options.FindOneAndReplaceOptions) error {
+	opts.SetUpsert(true)
+	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+
+		result := col.FindOneAndReplace(*ctx, filter, doc, opts)
+
+		return result.Err()
+
+	})
+
+}
+
+func (mongoEngine *MongoEngine) FindOneAndUpdate(doc interface{}, filter interface{}, opts *options.FindOneAndUpdateOptions) error {
+	opts.SetUpsert(true)
+	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+
+		result := col.FindOneAndUpdate(*ctx, filter, doc, opts)
+
+		return result.Err()
+
+	})
+
+}
+func (mongoEngine *MongoEngine) Count(filter interface{}, opts *options.CountOptions) (int64, error) {
+	var size int64
+	err := mongoEngine.Exec(func(collection *mongo.Collection, context *context.Context) error {
+		_size, err := collection.CountDocuments(*context, filter, opts)
+		if err != nil {
+			return err
+		}
+		size = _size
+		return nil
+	})
+
+	return size, err
+
+}
+func (mongoEngine *MongoEngine) Find(docs []interface{}, filter interface{}, opts *options.FindOptions) {
+
+	mongoEngine.Exec(func(collection *mongo.Collection, ctx *context.Context) error {
+
+		cursor, err := collection.Find(*ctx, filter, opts)
+
+		if err != nil {
+			return err
+		}
+
+		if cursor.Err() != nil {
+			return cursor.Err()
+		}
+
+		cursor.All(*ctx, &docs)
+		return nil
+	})
+
+}
+
+/*
 func (mongoEngine *MongoEngine) Find(filter interface{}, opts *options.FindOptions, items []interface{}) error {
 
 	err := mongoEngine.Connect()
@@ -90,6 +188,10 @@ func (mongoEngine *MongoEngine) InsertOne(doc interface{}, opts *options.InsertO
 	return mongoEngine.Collection.InsertOne(context.TODO(), doc, opts)
 }
 
+<<<<<<< HEAD
+=======
+/*
+>>>>>>> refs/remotes/origin/main
 func (mongoEngine *MongoEngine) FindOne(item interface{}, filter interface{}, opts *options.FindOneOptions) error {
 	err := mongoEngine.Connect()
 	if err != nil {
@@ -102,6 +204,7 @@ func (mongoEngine *MongoEngine) FindOne(item interface{}, filter interface{}, op
 	return err
 
 }
+
 func (mongoEngine *MongoEngine) Exists(filter interface{}, opts *options.FindOneOptions) (bool, error) {
 
 	err := mongoEngine.Connect()
@@ -157,52 +260,4 @@ func (mongoEngine *MongoEngine) Save(doc interface{}, filter interface{}, findOp
 	}
 	return nil
 }
-
-func (mongoEngine *MongoEngine) Aggregate(docs []interface{}, pipeline interface{}, aggragateOpts *options.AggregateOptions) error {
-
-	err := mongoEngine.Connect()
-	if err != nil {
-		return err
-	}
-	defer mongoEngine.Disconnect()
-
-	cursor, err := mongoEngine.Collection.Aggregate(context.TODO(), pipeline, aggragateOpts)
-
-	if err != nil {
-		return err
-	}
-	return cursor.All(context.TODO(), &docs)
-
-}
-
-func (mongoEngine *MongoEngine) CreateIndex(model mongo.IndexModel, opts *options.CreateIndexesOptions) error {
-
-	err := mongoEngine.Connect()
-	if err != nil {
-		return err
-	}
-	defer mongoEngine.Disconnect()
-
-	_, err = mongoEngine.Collection.Indexes().CreateOne(context.TODO(), model, opts)
-	if err != nil {
-		return err
-	}
-	return nil
-
-}
-
-func (mongoEngine *MongoEngine) CreateManyIndex(model []mongo.IndexModel, opts *options.CreateIndexesOptions) error {
-
-	err := mongoEngine.Connect()
-	if err != nil {
-		return err
-	}
-	defer mongoEngine.Disconnect()
-
-	_, err = mongoEngine.Collection.Indexes().CreateMany(context.TODO(), model, opts)
-	if err != nil {
-		return err
-	}
-	return nil
-
-}
+*/
