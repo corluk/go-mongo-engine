@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -94,29 +96,28 @@ func (mongoEngine *MongoEngine) FindOne(doc interface{}, filter interface{}, opt
 
 }
 
-func (mongoEngine *MongoEngine) FindOneAndReplace(doc interface{}, filter interface{}, opts *options.FindOneAndReplaceOptions) error {
+
+func (mongoEngine *MongoEngine) Save(doc interface{}, find *interface{}, opts *options.FindOneAndReplaceOptions) error {
+
+	if opts == nil {
+		opts = options.FindOneAndReplace()
+
+	}
+
 	opts.SetUpsert(true)
 	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
 
-		result := col.FindOneAndReplace(*ctx, filter, doc, opts)
+		if find != nil {
+			result := col.FindOneAndReplace(*ctx, find, doc, opts)
+			return result.Err()
+		}
 
-		return result.Err()
+		return nil
 
 	})
 
 }
 
-func (mongoEngine *MongoEngine) FindOneAndUpdate(doc interface{}, filter interface{}, opts *options.FindOneAndUpdateOptions) error {
-	opts.SetUpsert(true)
-	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
-
-		result := col.FindOneAndUpdate(*ctx, filter, doc, opts)
-
-		return result.Err()
-
-	})
-
-}
 func (mongoEngine *MongoEngine) Count(filter interface{}, opts *options.CountOptions) (int64, error) {
 	var size int64
 	err := mongoEngine.Exec(func(collection *mongo.Collection, context *context.Context) error {
@@ -188,10 +189,9 @@ func (mongoEngine *MongoEngine) InsertOne(doc interface{}, opts *options.InsertO
 	return mongoEngine.Collection.InsertOne(context.TODO(), doc, opts)
 }
 
-<<<<<<< HEAD
-=======
+
 /*
->>>>>>> refs/remotes/origin/main
+
 func (mongoEngine *MongoEngine) FindOne(item interface{}, filter interface{}, opts *options.FindOneOptions) error {
 	err := mongoEngine.Connect()
 	if err != nil {
