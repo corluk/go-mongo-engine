@@ -71,7 +71,15 @@ func (mongoEngine *MongoEngine) Find(filter interface{}, opts *options.FindOptio
 	return err
 
 }
+func (mongoEngine *MongoEngine) InsertMany(docs []interface{}, opts *options.InsertOneOptions) (*mongo.InsertManyResult, error) {
+	err := mongoEngine.Connect()
+	if err != nil {
+		return nil, err
+	}
+	defer mongoEngine.Disconnect()
 
+	return mongoEngine.Collection.InsertMany(context.TODO(), docs, opts)
+}
 func (mongoEngine *MongoEngine) InsertOne(doc interface{}, opts *options.InsertOneOptions) (*mongo.InsertOneResult, error) {
 	err := mongoEngine.Connect()
 	if err != nil {
@@ -82,7 +90,7 @@ func (mongoEngine *MongoEngine) InsertOne(doc interface{}, opts *options.InsertO
 	return mongoEngine.Collection.InsertOne(context.TODO(), doc, opts)
 }
 
-func (mongoEngine *MongoEngine) FindOne(item interface{},filter interface{}, opts *options.FindOneOptions) error {
+func (mongoEngine *MongoEngine) FindOne(item interface{}, filter interface{}, opts *options.FindOneOptions) error {
 	err := mongoEngine.Connect()
 	if err != nil {
 		return err
@@ -115,7 +123,10 @@ func (mongoEngine *MongoEngine) DropCollection() error {
 	return mongoEngine.Collection.Drop(context.TODO())
 
 }
-func (mongoEngine *MongoEngine) Replace(doc interface{}, filter interface{}, opts *options.ReplaceOptions) (*mongo.UpdateResult, error) {
+
+
+
+func (mongoEngine *MongoEngine) ReplaceOne(doc interface{}, filter interface{}, opts *options.ReplaceOptions) (*mongo.UpdateResult, error) {
 	err := mongoEngine.Connect()
 	if err != nil {
 		return nil, err
@@ -134,7 +145,7 @@ func (mongoEngine *MongoEngine) Save(doc interface{}, filter interface{}, findOp
 
 	}
 	if exists {
-		_, err = mongoEngine.Replace(doc, filter, replaceOpts)
+		_, err = mongoEngine.ReplaceOne(doc, filter, replaceOpts)
 		if err != nil {
 			return err
 		}
@@ -145,4 +156,53 @@ func (mongoEngine *MongoEngine) Save(doc interface{}, filter interface{}, findOp
 		}
 	}
 	return nil
+}
+
+func (mongoEngine *MongoEngine) Aggregate(docs []interface{}, pipeline interface{}, aggragateOpts *options.AggregateOptions) error {
+
+	err := mongoEngine.Connect()
+	if err != nil {
+		return err
+	}
+	defer mongoEngine.Disconnect()
+
+	cursor, err := mongoEngine.Collection.Aggregate(context.TODO(), pipeline, aggragateOpts)
+
+	if err != nil {
+		return err
+	}
+	return cursor.All(context.TODO(), &docs)
+
+}
+
+func (mongoEngine *MongoEngine) CreateIndex(model mongo.IndexModel, opts *options.CreateIndexesOptions) error {
+
+	err := mongoEngine.Connect()
+	if err != nil {
+		return err
+	}
+	defer mongoEngine.Disconnect()
+
+	_, err = mongoEngine.Collection.Indexes().CreateOne(context.TODO(), model, opts)
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (mongoEngine *MongoEngine) CreateManyIndex(model []mongo.IndexModel, opts *options.CreateIndexesOptions) error {
+
+	err := mongoEngine.Connect()
+	if err != nil {
+		return err
+	}
+	defer mongoEngine.Disconnect()
+
+	_, err = mongoEngine.Collection.Indexes().CreateMany(context.TODO(), model, opts)
+	if err != nil {
+		return err
+	}
+	return nil
+
 }
