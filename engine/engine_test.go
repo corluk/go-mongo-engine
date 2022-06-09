@@ -4,13 +4,16 @@ import (
 	"testing"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type TestItem struct {
-	ID   primitive.ObjectID `json:"_id"`
-	Name string             `json:"name"`
-	Time time.Time          `json:"time"`
+	ID    primitive.ObjectID `json:"_id"`
+	Name  string             `json:"name"`
+	Value string             `json:"value"`
+	Time  time.Time          `json:"time"`
 }
 
 func TestInsertOne(t *testing.T) {
@@ -19,11 +22,20 @@ func TestInsertOne(t *testing.T) {
 	doc := TestItem{
 		ID:   primitive.NewObjectID(),
 		Name: "test item 12",
+
 		Time: time.Now(),
 	}
 	mongoEngine := New("mongodb://localhost:27017", "test", "test")
 
-	err := mongoEngine.Save(doc, nil, nil)
+	model := mongo.IndexModel{Keys: bson.D{{"title", "text"}, {"value", "text"}}}
+
+	err := mongoEngine.AddIndex(model, nil)
+	if err != nil {
+
+		t.FailNow()
+	}
+
+	err = mongoEngine.Save(doc, nil, nil)
 
 	if err != nil {
 

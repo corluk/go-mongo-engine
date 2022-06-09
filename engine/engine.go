@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -96,7 +94,6 @@ func (mongoEngine *MongoEngine) FindOne(doc interface{}, filter interface{}, opt
 
 }
 
-
 func (mongoEngine *MongoEngine) Save(doc interface{}, find *interface{}, opts *options.FindOneAndReplaceOptions) error {
 
 	if opts == nil {
@@ -148,6 +145,25 @@ func (mongoEngine *MongoEngine) Find(docs []interface{}, filter interface{}, opt
 
 		cursor.All(*ctx, &docs)
 		return nil
+	})
+
+}
+
+func (mongoEngine *MongoEngine) AddIndex(model mongo.IndexModel, opts *options.CreateIndexesOptions) error {
+
+	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+
+		_, err := col.Indexes().CreateOne(*ctx, model, opts)
+		return err
+	})
+
+}
+func (mongoEngine *MongoEngine) AddIndexes(model []mongo.IndexModel, opts *options.CreateIndexesOptions) error {
+
+	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+
+		_, err := col.Indexes().CreateMany(*ctx, model, opts)
+		return err
 	})
 
 }
