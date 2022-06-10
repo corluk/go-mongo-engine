@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -12,18 +13,18 @@ import (
 )
 
 type TestItem struct {
-	ID    primitive.ObjectID `bson:"_id"`
-	Name  string             `json:"name"`
-	Value string             `json:"value"`
-	Time  time.Time          `json:"time"`
+	Name   string    `json:"name"`
+	Value  string    `json:"value,omitempty" bson:"value,omitempty"`
+	Time   time.Time `json:"time"`
+	Unique string    `json:"unique,omitempty" bson:"unique,omitempty"`
 }
 
 func TestInsertOne(t *testing.T) {
 
 	//var testItem TestItem
 	doc := TestItem{
-		ID:   primitive.NewObjectID(),
-		Name: "test item 122s2",
+
+		Name: "test item val:",
 
 		Time: time.Now(),
 	}
@@ -33,10 +34,13 @@ func TestInsertOne(t *testing.T) {
 		Keys:    bson.D{primitive.E{Key: "name", Value: "text"}, primitive.E{Key: "value", Value: "text"}},
 		Options: options.Index().SetDefaultLanguage("turkish"),
 	}
+	opts := options.Index()
+	opts.SetUnique(true)
+	opts.SetSparse(true)
 	models := mongo.IndexModel{
 
 		Keys:    bson.D{primitive.E{Key: "unique1", Value: 1}, primitive.E{Key: "unique2", Value: 1}},
-		Options: options.Index().SetUnique(true),
+		Options: opts,
 
 		/*, {
 			Keys:    bson.D{primitive.E{Key: "unique3", Value: 1}},
@@ -51,27 +55,41 @@ func TestInsertOne(t *testing.T) {
 	}
 	err = mongoEngine.AddIndex(model, nil)
 	if err != nil {
-
+		t.Logf("err %s", err.Error())
 		t.FailNow()
 	}
-	filter := bson.D{primitive.E{Key: "name", Value: doc.Name}}
-	err = mongoEngine.Save(doc, filter)
 
-	if err != nil {
+	for i := 1; i <= 10; i++ {
+		doc.Name = fmt.Sprintf("test value %d", i)
 
-		t.FailNow()
+		filter := bson.D{primitive.E{Key: "name", Value: doc.Name}}
+		err = mongoEngine.Save(doc, filter)
+
+		if err != nil {
+			t.Logf("err %s", err.Error())
+			t.FailNow()
+		}
 	}
+
 	var items []TestItem
 	err = mongoEngine.SearchByText("test", func(cursor *mongo.Cursor) error {
 
 		return cursor.All(context.TODO(), &items)
 	}, nil)
 	if err != nil {
-
+		t.Logf("err %s", err.Error())
 		t.FailNow()
 	}
 
 	if len(items) < 1 {
+		t.Logf("err %s", err.Error())
+		t.FailNow()
+	}
+	filter := bson.D{}
+	err = mongoEngine.Find(items, filter, nil)
+
+	if err != nil {
+		t.Logf("err %s", err.Error())
 		t.FailNow()
 	}
 

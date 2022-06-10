@@ -140,9 +140,9 @@ func (mongoEngine *MongoEngine) Count(filter interface{}, opts *options.CountOpt
 	return size, err
 
 }
-func (mongoEngine *MongoEngine) Find(docs []interface{}, filter interface{}, opts *options.FindOptions) {
+func (mongoEngine *MongoEngine) Find(docs interface{}, filter interface{}, opts *options.FindOptions) error {
 
-	mongoEngine.Exec(func(collection *mongo.Collection, ctx *context.Context) error {
+	return mongoEngine.Exec(func(collection *mongo.Collection, ctx *context.Context) error {
 
 		cursor, err := collection.Find(*ctx, filter, opts)
 
