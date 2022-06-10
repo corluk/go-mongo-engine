@@ -2,8 +2,11 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -29,7 +32,7 @@ func New(uri string, dbName string, colName string) MongoEngine {
 		CollectionName: colName,
 	}
 	engine.Context = func() (context.Context, context.CancelFunc) {
-		ctx := context.Background()
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		return ctx, cancel
@@ -78,7 +81,14 @@ func (mongoEngine *MongoEngine) Exec(onExec func(collection *mongo.Collection, c
 	return onExec(mongoEngine.Collection, &ctx)
 
 }
+func (mongoEngine *MongoEngine) DropCollection() {
 
+	mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+
+		return col.Drop(*ctx)
+	})
+
+}
 func (mongoEngine *MongoEngine) FindOne(doc interface{}, filter interface{}, opts *options.FindOneOptions) {
 
 	mongoEngine.Exec(func(collection *mongo.Collection, context *context.Context) error {
@@ -94,6 +104,7 @@ func (mongoEngine *MongoEngine) FindOne(doc interface{}, filter interface{}, opt
 
 }
 
+/*
 func (mongoEngine *MongoEngine) Save(doc interface{}, find *interface{}, opts *options.FindOneAndReplaceOptions) error {
 
 	if opts == nil {
@@ -114,7 +125,7 @@ func (mongoEngine *MongoEngine) Save(doc interface{}, find *interface{}, opts *o
 	})
 
 }
-
+*/
 func (mongoEngine *MongoEngine) Count(filter interface{}, opts *options.CountOptions) (int64, error) {
 	var size int64
 	err := mongoEngine.Exec(func(collection *mongo.Collection, context *context.Context) error {
@@ -164,6 +175,48 @@ func (mongoEngine *MongoEngine) AddIndexes(model []mongo.IndexModel, opts *optio
 
 		_, err := col.Indexes().CreateMany(*ctx, model, opts)
 		return err
+	})
+
+}
+
+func (mongoEngine *MongoEngine) Save(doc interface{}, filter interface{}) error {
+
+	err := mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+
+		opts := &options.ReplaceOptions{}
+		opts.SetUpsert(true)
+		_, err := col.ReplaceOne(*ctx, filter, doc, opts)
+
+		return err
+
+	})
+	return err
+
+	// })
+
+}
+func (mongoEngine *MongoEngine) SearchByText(q string, onCursor func(cursor *mongo.Cursor) error, opts *options.FindOptions) error {
+
+	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+
+		q := bson.D{primitive.E{Key: "$text", Value: bson.D{primitive.E{Key: "$search", Value: q}}}}
+
+		temporaryBytes, err := bson.MarshalExtJSON(q, true, true)
+		if err != nil {
+
+			return err
+		}
+		str := string(temporaryBytes)
+		fmt.Printf(" json %s ", str)
+		cursor, err := col.Find(*ctx, q, opts)
+		if err != nil {
+			return err
+		}
+		if cursor.Err() != nil {
+			return cursor.Err()
+		}
+		return onCursor(cursor)
+
 	})
 
 }
