@@ -160,7 +160,7 @@ func (mongoEngine *MongoEngine) Count(filter interface{}, opts *options.CountOpt
 func (mongoEngine *MongoEngine) Find(docs interface{}, filter interface{}, opts *options.FindOptions) error {
 
 	return mongoEngine.Exec(func(collection *mongo.Collection, ctx *context.Context) error {
-
+		var items []bson.M
 		cursor, err := collection.Find(*ctx, filter, opts)
 
 		if err != nil {
@@ -171,8 +171,13 @@ func (mongoEngine *MongoEngine) Find(docs interface{}, filter interface{}, opts 
 			return cursor.Err()
 		}
 
-		cursor.All(*ctx, &docs)
-		return nil
+		err = cursor.All(context.TODO(), &items)
+		marshall, err := bson.Marshal(items)
+		if err != nil {
+			return err
+		}
+		bson.Unmarshal(marshall, &docs)
+		return err
 	})
 
 }
@@ -193,6 +198,7 @@ func (mongoEngine *MongoEngine) Save(doc interface{}, filter interface{}) error 
 	// })
 
 }
+
 func (mongoEngine *MongoEngine) SearchByText(q string, onCursor func(cursor *mongo.Cursor) error, opts *options.FindOptions) error {
 
 	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
