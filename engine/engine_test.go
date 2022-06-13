@@ -41,11 +41,6 @@ func TestInsertOne(t *testing.T) {
 
 		Keys:    bson.D{primitive.E{Key: "unique1", Value: 1}, primitive.E{Key: "unique2", Value: 1}},
 		Options: opts,
-
-		/*, {
-			Keys:    bson.D{primitive.E{Key: "unique3", Value: 1}},
-			Options: options.Index().SetUnique(true),
-		},*/
 	}
 
 	err := mongoEngine.AddIndex(models, nil)
@@ -72,7 +67,7 @@ func TestInsertOne(t *testing.T) {
 	}
 
 	var items []TestItem
-	err = mongoEngine.SearchByText("test", func(cursor *mongo.Cursor) error {
+	err = mongoEngine.SearchByText("test", func(cursor *mongo.Cursor, ctx *context.Context) error {
 
 		return cursor.All(context.TODO(), &items)
 	}, nil)
@@ -86,7 +81,12 @@ func TestInsertOne(t *testing.T) {
 		t.FailNow()
 	}
 	filter := bson.D{}
-	err = mongoEngine.Find(items, filter, nil)
+	var items3 []Item
+	err = mongoEngine.Find(filter, func(cursor *mongo.Cursor, ctx *context.Context) error {
+
+		return cursor.All(*ctx, &items3)
+
+	}, nil)
 
 	if err != nil {
 		t.Logf("err %s", err.Error())
