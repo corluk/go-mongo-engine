@@ -38,6 +38,24 @@ func New(uri string, dbName string, colName string) MongoEngine {
 	return engine
 
 }
+func (mongoEngine *MongoEngine) AddIndex(model mongo.IndexModel, opts *options.CreateIndexesOptions) error {
+
+	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+
+		_, err := col.Indexes().CreateOne(*ctx, model, opts)
+		return err
+	})
+
+}
+func (mongoEngine *MongoEngine) AddIndexes(model []mongo.IndexModel, opts *options.CreateIndexesOptions) error {
+
+	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+
+		_, err := col.Indexes().CreateMany(*ctx, model, opts)
+		return err
+	})
+
+}
 
 func (mongoEngine *MongoEngine) Connect() error {
 
@@ -145,25 +163,6 @@ func (mongoEngine *MongoEngine) Find(docs []interface{}, filter interface{}, opt
 
 		cursor.All(*ctx, &docs)
 		return nil
-	})
-
-}
-
-func (mongoEngine *MongoEngine) AddIndex(model mongo.IndexModel, opts *options.CreateIndexesOptions) error {
-
-	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
-
-		_, err := col.Indexes().CreateOne(*ctx, model, opts)
-		return err
-	})
-
-}
-func (mongoEngine *MongoEngine) AddIndexes(model []mongo.IndexModel, opts *options.CreateIndexesOptions) error {
-
-	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
-
-		_, err := col.Indexes().CreateMany(*ctx, model, opts)
-		return err
 	})
 
 }
