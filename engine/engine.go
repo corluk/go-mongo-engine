@@ -2,7 +2,6 @@ package engine
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -200,13 +199,6 @@ func (mongoEngine *MongoEngine) SearchByText(q string, onCursor func(cursor *mon
 
 		q := bson.D{primitive.E{Key: "$text", Value: bson.D{primitive.E{Key: "$search", Value: q}}}}
 
-		temporaryBytes, err := bson.MarshalExtJSON(q, true, true)
-		if err != nil {
-
-			return err
-		}
-		str := string(temporaryBytes)
-		fmt.Printf(" json %s ", str)
 		cursor, err := col.Find(*ctx, q, opts)
 		if err != nil {
 			return err
