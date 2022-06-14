@@ -42,18 +42,18 @@ func New(uri string, dbName string, colName string) MongoEngine {
 }
 func (mongoEngine *MongoEngine) AddIndex(model mongo.IndexModel, opts *options.CreateIndexesOptions) error {
 
-	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+	return mongoEngine.Exec(func(col *mongo.Collection) error {
 
-		_, err := col.Indexes().CreateOne(*ctx, model, opts)
+		_, err := col.Indexes().CreateOne(context.TODO(), model, opts)
 		return err
 	})
 
 }
 func (mongoEngine *MongoEngine) AddIndexes(model []mongo.IndexModel, opts *options.CreateIndexesOptions) error {
 
-	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+	return mongoEngine.Exec(func(col *mongo.Collection) error {
 
-		_, err := col.Indexes().CreateMany(*ctx, model, opts)
+		_, err := col.Indexes().CreateMany(context.TODO(), model, opts)
 		return err
 	})
 
@@ -88,29 +88,29 @@ func (mongoEngine *MongoEngine) SetCollection(db string, name string) (*mongo.Co
 	return mongoEngine.Collection, nil
 }
 
-func (mongoEngine *MongoEngine) Exec(onExec func(collection *mongo.Collection, context *context.Context) error) error {
+func (mongoEngine *MongoEngine) Exec(onExec func(collection *mongo.Collection) error) error {
 	err := mongoEngine.Connect()
 	if err != nil {
 		return err
 	}
 	defer mongoEngine.Disconnect()
-	ctx, _ := mongoEngine.Context()
-	return onExec(mongoEngine.Collection, &ctx)
+
+	return onExec(mongoEngine.Collection)
 
 }
 func (mongoEngine *MongoEngine) DropCollection() {
 
-	mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+	mongoEngine.Exec(func(col *mongo.Collection) error {
 
-		return col.Drop(*ctx)
+		return col.Drop(context.TODO())
 	})
 
 }
 func (mongoEngine *MongoEngine) FindOne(filter interface{}, onCursor func(cursor *mongo.SingleResult, ctx *context.Context) error, opts *options.FindOneOptions) {
 
-	mongoEngine.Exec(func(collection *mongo.Collection, context *context.Context) error {
+	mongoEngine.Exec(func(collection *mongo.Collection) error {
 
-		cursor := collection.FindOne(*context, filter, opts)
+		cursor := collection.FindOne(context.TODO(), filter, opts)
 		if cursor.Err() != nil {
 			return cursor.Err()
 		}
@@ -123,8 +123,8 @@ func (mongoEngine *MongoEngine) FindOne(filter interface{}, onCursor func(cursor
 
 func (mongoEngine *MongoEngine) Count(filter interface{}, opts *options.CountOptions) (int64, error) {
 	var size int64
-	err := mongoEngine.Exec(func(collection *mongo.Collection, context *context.Context) error {
-		_size, err := collection.CountDocuments(*context, filter, opts)
+	err := mongoEngine.Exec(func(collection *mongo.Collection) error {
+		_size, err := collection.CountDocuments(context.TODO(), filter, opts)
 		if err != nil {
 			return err
 		}
@@ -135,17 +135,17 @@ func (mongoEngine *MongoEngine) Count(filter interface{}, opts *options.CountOpt
 	return size, err
 
 }
-func (mongoEngine *MongoEngine) Find(filter interface{}, onCursor func(cursor *mongo.Cursor, ctx *context.Context) error, opts *options.FindOptions) error {
+func (mongoEngine *MongoEngine) Find(filter interface{}, onCursor func(cursor *mongo.Cursor) error, opts *options.FindOptions) error {
 
-	return mongoEngine.Exec(func(collection *mongo.Collection, ctx *context.Context) error {
+	return mongoEngine.Exec(func(collection *mongo.Collection) error {
 
-		cursor, err := collection.Find(*ctx, filter, opts)
+		cursor, err := collection.Find(context.TODO(), filter, opts)
 
 		if err != nil {
 			return err
 		}
-		cursorCtx, _ := mongoEngine.Context()
-		return onCursor(cursor, &cursorCtx)
+
+		return onCursor(cursor)
 
 	})
 
@@ -153,11 +153,11 @@ func (mongoEngine *MongoEngine) Find(filter interface{}, onCursor func(cursor *m
 
 func (mongoEngine *MongoEngine) Save(doc interface{}, filter interface{}) error {
 
-	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+	return mongoEngine.Exec(func(col *mongo.Collection) error {
 
 		opts := &options.ReplaceOptions{}
 		opts.SetUpsert(true)
-		_, err := col.ReplaceOne(*ctx, filter, doc, opts)
+		_, err := col.ReplaceOne(context.TODO(), filter, doc, opts)
 
 		return err
 
@@ -165,9 +165,9 @@ func (mongoEngine *MongoEngine) Save(doc interface{}, filter interface{}) error 
 
 }
 
-func (mongoEngine *MongoEngine) SearchByText(q string, onCursor func(cursor *mongo.Cursor, context *context.Context) error, opts *options.FindOptions) error {
+func (mongoEngine *MongoEngine) SearchByText(q string, onCursor func(cursor *mongo.Cursor) error, opts *options.FindOptions) error {
 
-	return mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
+	return mongoEngine.Exec(func(col *mongo.Collection) error {
 
 		q := bson.D{primitive.E{Key: "$text", Value: bson.D{primitive.E{Key: "$search", Value: q}}}}
 		findCtx, _ := mongoEngine.Context()
@@ -176,9 +176,8 @@ func (mongoEngine *MongoEngine) SearchByText(q string, onCursor func(cursor *mon
 		if err != nil {
 			return err
 		}
-		cursorCtx, _ := mongoEngine.Context()
 
-		return onCursor(cursor, &cursorCtx)
+		return onCursor(cursor)
 
 	})
 

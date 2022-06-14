@@ -37,15 +37,15 @@ func TestPagination(t *testing.T) {
 			ui = append(ui, t)
 		}
 
-		err := mongoEngine.Exec(func(col *mongo.Collection, ctx *context.Context) error {
-			_, err := col.InsertMany(*ctx, ui, nil)
+		err := mongoEngine.Exec(func(col *mongo.Collection) error {
+			_, err := col.InsertMany(context.TODO(), ui, nil)
 			return err
 		})
 
 		assert.Nil(t, err)
 		var itemsB []Item
-		err = mongoEngine.Find(bson.M{}, func(cursor *mongo.Cursor, ctx *context.Context) error {
-			return cursor.All(*ctx, &itemsB)
+		err = mongoEngine.Find(bson.M{}, func(cursor *mongo.Cursor) error {
+			return cursor.All(context.TODO(), &itemsB)
 		}, nil)
 		assert.Nil(t, err)
 		paginate := Paginate{
@@ -65,8 +65,8 @@ func TestPagination(t *testing.T) {
 
 		assert.Greater(t, count, int64(1))
 
-		err = paginate.Find(bson.M{}, func(cursor *mongo.Cursor, ctx *context.Context) error {
-			return cursor.All(*ctx, &items)
+		err = paginate.Find(bson.M{}, func(cursor *mongo.Cursor) error {
+			return cursor.All(context.TODO(), &items)
 		}, &opts)
 
 		assert.Nil(t, err)

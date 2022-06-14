@@ -67,7 +67,7 @@ func TestInsertOne(t *testing.T) {
 	}
 
 	var items []TestItem
-	err = mongoEngine.SearchByText("test", func(cursor *mongo.Cursor, ctx *context.Context) error {
+	err = mongoEngine.SearchByText("test", func(cursor *mongo.Cursor) error {
 
 		return cursor.All(context.TODO(), &items)
 	}, nil)
@@ -82,9 +82,9 @@ func TestInsertOne(t *testing.T) {
 	}
 	filter := bson.D{}
 	var items3 []Item
-	err = mongoEngine.Find(filter, func(cursor *mongo.Cursor, ctx *context.Context) error {
+	err = mongoEngine.Find(filter, func(cursor *mongo.Cursor) error {
 
-		return cursor.All(*ctx, &items3)
+		return cursor.All(context.TODO(), &items3)
 
 	}, nil)
 
