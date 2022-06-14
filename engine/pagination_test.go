@@ -55,9 +55,9 @@ func TestPagination(t *testing.T) {
 		var items []Item
 		opts := options.FindOptions{}
 		count, err := mongoEngine.Count(bson.M{}, nil)
-
-		assert.Greater(t, 1, count)
-		err = mongoEngine.Find(&items, bson.M{}, &opts)
+		assert.Nil(t, err)
+		assert.Greater(t, count, int64(1))
+		err = paginate.Find(&items, bson.M{}, &opts)
 
 		assert.Nil(t, err)
 
