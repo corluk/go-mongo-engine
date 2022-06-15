@@ -62,6 +62,9 @@ func (mongoEngine *MongoEngine) AddIndexes(model []mongo.IndexModel, opts *optio
 func (mongoEngine *MongoEngine) Connect() error {
 
 	ctx, _ := mongoEngine.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoEngine.Uri))
 	if err != nil {
 		return err
@@ -73,6 +76,9 @@ func (mongoEngine *MongoEngine) Connect() error {
 
 func (mongoEngine *MongoEngine) Disconnect() error {
 	ctx, _ := mongoEngine.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	err := mongoEngine.Connection.Disconnect(ctx)
 	if err != nil {
 		return err
