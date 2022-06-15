@@ -30,7 +30,7 @@ func (paginate *Paginate) SearchByText(q string, onCursor func(cursor *mongo.Cur
 	return paginate.Engine.SearchByText(q, onCursor, opts)
 }
 
-func (paginate *Paginate) Find(docs interface{}, filter interface{}, opts *options.FindOptions) error {
+func (paginate *Paginate) Find(filter interface{}, onCursor func(cursor *mongo.Cursor) error, opts *options.FindOptions) error {
 	paginate.setPaginate(opts)
-	return paginate.Engine.Find(docs, filter, opts)
+	return paginate.Engine.Find(filter, onCursor, opts)
 }
