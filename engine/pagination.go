@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"context"
+
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -33,4 +35,8 @@ func (paginate *Paginate) SearchByText(q string, onCursor func(cursor *mongo.Cur
 func (paginate *Paginate) Find(filter interface{}, onCursor func(cursor *mongo.Cursor) error, opts *options.FindOptions) error {
 	paginate.setPaginate(opts)
 	return paginate.Engine.Find(filter, onCursor, opts)
+}
+
+func (paginate *Paginate) Count(filter interface{}, opts *options.CountOptions) (int64, error) {
+	return paginate.Engine.Count(context.TODO(), opts)
 }
